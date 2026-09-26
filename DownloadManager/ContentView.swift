@@ -750,6 +750,22 @@ struct SettingsView: View {
                             }
                         }
                         Divider().opacity(0.15)
+                        // Çıktı dosya formatı
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Çıktı formatı").font(.system(size: 12, weight: .semibold))
+                            Picker("", selection: $engine.outputFormat) {
+                                Text("MP4  (en uyumlu)").tag("mp4")
+                                Text("MKV  (her codec)").tag("mkv")
+                                Text("WebM").tag("webm")
+                                Text("MP3  (sadece ses)").tag("mp3")
+                                Text("M4A  (sadece ses)").tag("m4a")
+                                Text("Orijinal (dönüştürmesiz)").tag("original")
+                            }.pickerStyle(.menu).disabled(!engine.ytdlpInstalled)
+                            Text("Seçili: .\(engine.outputFormat)")
+                                .font(.system(size: 9, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                        }
+                        Divider().opacity(0.15)
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Video kalitesi").font(.system(size: 12, weight: .semibold))
                             Picker("", selection: $engine.ytdlpFormat) {

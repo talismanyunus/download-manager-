@@ -421,7 +421,7 @@
     return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
   }
 
-  // ── Streaming sitede FAB göster ───────────────────────────────────────────
+  // ── Streaming sitede buton göster ────────────────────────────────────────
   var STREAMING = ["youtube.com","youtu.be","vimeo.com","hdfilmcehennemi.com",
     "dizipal.com","diziwatch.com","filmizlesene.com","turkanime.co","dizibox.me",
     "fullhdfilm.co","jetfilmizle.com","puhu.tv","gain.tv","exxen.com","blu.tv",
@@ -436,7 +436,92 @@
     } catch(e){ return false; }
   }
 
-  if (onPage(location.href)) {
+  function isYouTube(url) {
+    try {
+      var h = new URL(url).hostname.replace(/^www\./,"");
+      return h === "youtube.com" || h === "youtu.be";
+    } catch(e){ return false; }
+  }
+
+  // YouTube player controls'a entegre buton
+  function injectYouTubeButton() {
+    if (document.getElementById("dm-yt-btn")) return;
+    // YouTube'un sağ kontrol grubu: .ytp-right-controls
+    var controls = document.querySelector(".ytp-right-controls");
+    if (!controls) return;
+
+    var btn = document.createElement("button");
+    btn.id = "dm-yt-btn";
+    btn.title = "Download Manager ile indir";
+    btn.style.cssText = [
+      "background:none;border:none;cursor:pointer;",
+      "display:inline-flex;align-items:center;gap:5px;",
+      "padding:0 8px;height:48px;",
+      "color:"+ACCENT+";",
+      "font:700 13px/1 -apple-system,sans-serif;",
+      "opacity:0.9;transition:opacity .15s;",
+      "vertical-align:top;"
+    ].join("");
+
+    // İndirme ikonu SVG
+    btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"'
+      + ' stroke="'+ACCENT+'" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
+      + '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>'
+      + '<polyline points="7 10 12 15 17 10"/>'
+      + '<line x1="12" y1="15" x2="12" y2="3"/>'
+      + '</svg>'
+      + '<span style="font-size:12px;font-weight:700;letter-spacing:.3px">DM</span>';
+
+    btn.onmouseenter = function(){ btn.style.opacity="1"; btn.style.transform="scale(1.1)"; };
+    btn.onmouseleave = function(){ btn.style.opacity="0.9"; btn.style.transform=""; };
+
+    btn.onclick = function(e) {
+      e.stopPropagation();
+      doDownload(location.href, location.href);
+      // Kısa onay animasyonu
+      btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"'
+        + ' stroke="'+ACCENT+'" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'
+        + '<polyline points="20 6 9 17 4 12"/></svg>'
+        + '<span style="font-size:12px;font-weight:700">Eklendi</span>';
+      setTimeout(function(){
+        btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"'
+          + ' stroke="'+ACCENT+'" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
+          + '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>'
+          + '<polyline points="7 10 12 15 17 10"/>'
+          + '<line x1="12" y1="15" x2="12" y2="3"/>'
+          + '</svg>'
+          + '<span style="font-size:12px;font-weight:700;letter-spacing:.3px">DM</span>';
+      }, 2500);
+    };
+
+    // En başa ekle (sol taraf, diğer butonlardan önce)
+    controls.insertBefore(btn, controls.firstChild);
+  }
+
+  if (isYouTube(location.href)) {
+    // Player controls'u bekle (YouTube SPA — DOM geç hazır olur)
+    var ytBtnInterval = setInterval(function(){
+      if (document.querySelector(".ytp-right-controls")) {
+        injectYouTubeButton();
+        clearInterval(ytBtnInterval);
+      }
+    }, 500);
+
+    // SPA navigasyon — her video değişiminde yeniden inject et
+    var ytLastUrl = location.href;
+    setInterval(function(){
+      if (location.href !== ytLastUrl) {
+        ytLastUrl = location.href;
+        // Eski butonu kaldır
+        var old = document.getElementById("dm-yt-btn");
+        if (old) old.remove();
+        // Yeni sayfada tekrar inject
+        setTimeout(injectYouTubeButton, 1500);
+      }
+    }, 800);
+
+  } else if (onPage(location.href)) {
+    // Diğer streaming siteler için FAB
     setTimeout(showFab, 1200);
   }
 })();

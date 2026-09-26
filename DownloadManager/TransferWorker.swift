@@ -78,6 +78,7 @@ final class TransferWorker {
     let limit: Int
     let headers: [String: String]
     let ytdlpFormat: String          // e.g. "bestvideo+bestaudio", "bestvideo[height<=720]+bestaudio", "bestaudio"
+    let outputFormat: String         // "mp4", "mkv", "webm", "mp3", "m4a", "original"
     let progress: (WorkerProgress) -> Void
     let completion: (WorkerResult) -> Void
     private let lock = NSLock()
@@ -95,9 +96,11 @@ final class TransferWorker {
     }
     init(source: URL, directory: URL, connections: Int, limit: Int, headers: [String: String],
          ytdlpFormat: String = "bestvideo+bestaudio/best",
+         outputFormat: String = "mp4",
          progress: @escaping (WorkerProgress) -> Void, completion: @escaping (WorkerResult) -> Void) {
         self.source = source; self.directory = directory; self.connections = connections
         self.limit = limit; self.headers = headers; self.ytdlpFormat = ytdlpFormat
+        self.outputFormat = outputFormat
         self.progress = progress; self.completion = completion
     }
     private var stopped: Bool { lock.lock(); defer { lock.unlock() }; return cancelled }
@@ -470,16 +473,20 @@ final class TransferWorker {
         }
         if stopped { return WorkerResult(cancelled: true) }
 
-        let outputTemplate: String
+        // Output template: HER ZAMAN %(ext)s — yt-dlp doğru uzantıyı belirlesin
+        // --merge-output-format ve --recode-video zaten istenen formatı verecek
+        let baseName: String
         if let name = suggestedName {
-            outputTemplate = directory.appendingPathComponent(name).path
+            // Uzantıyı sök, %(ext)s ekle — yt-dlp çıktı formatına göre uzantı koyar
+            let noExt = (name as NSString).deletingPathExtension
+            baseName = noExt.isEmpty ? "video" : noExt
         } else {
-            outputTemplate = directory.appendingPathComponent("video.%(ext)s").path
+            baseName = "video"
         }
+        let outputTemplate = directory.appendingPathComponent("\(baseName).%(ext)s").path
 
         status(0, 1, "İndiriliyor…")
 
-        // Progress template: YTPROG|downloaded_bytes|total_bytes|speed_bytes_per_sec|eta_seconds
         let progressTemplate = "YTPROG|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.speed)s|%(progress.eta)s"
 
         var args: [String] = [
@@ -491,6 +498,25 @@ final class TransferWorker {
             "--progress-template", progressTemplate,
             "-o", outputTemplate
         ]
+
+        // Çıktı formatı
+        if outputFormat != "original" {
+            let audioOnly = ["mp3", "m4a", "aac", "flac", "wav", "opus"].contains(outputFormat)
+            if audioOnly {
+                // Sadece ses — extract + recode
+                args += ["--extract-audio", "--audio-format", outputFormat, "--audio-quality", "0"]
+            } else {
+                // Video: önce merge formatını ayarla (birleştirme aşaması)
+                args += ["--merge-output-format", outputFormat]
+                // Eğer kaynak codec container'a sığmıyorsa recode et
+                // mp4 için x264/aac gerekiyorsa:
+                if outputFormat == "mp4" {
+                    args += ["--postprocessor-args", "ffmpeg:-c:v libx264 -c:a aac"]
+                } else {
+                    args += ["--recode-video", outputFormat]
+                }
+            }
+        }
 
         if let ffmpeg = ffmpegPath {
             args += ["--ffmpeg-location", (ffmpeg as NSString).deletingLastPathComponent]

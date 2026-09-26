@@ -67,6 +67,8 @@ final class DownloadEngine: NSObject, ObservableObject {
 
     // yt-dlp format seçeneği: "bestvideo+bestaudio/best", "bestvideo[height<=720]+bestaudio/best", "bestaudio/best"
     @Published var ytdlpFormat = "bestvideo+bestaudio/best" { didSet { persist() } }
+    /// Çıktı dosya formatı: "mp4", "mkv", "webm", "mp3", "m4a", "original"
+    @Published var outputFormat = "mp4" { didSet { persist() } }
 
     private var workers: [UUID: TransferWorker] = [:]
     private var samples: [UUID: (Date, Int64)] = [:]
@@ -86,6 +88,7 @@ final class DownloadEngine: NSObject, ObservableObject {
         var speedLimitKB: Int?
         var retryCount: Int?
         var ytdlpFormat: String?
+        var outputFormat: String?
     }
 
     init(storageURL: URL? = nil) {
@@ -108,6 +111,7 @@ final class DownloadEngine: NSObject, ObservableObject {
             speedLimitKB = max(0, saved.speedLimitKB ?? 0)
             retryCount = min(10, max(0, saved.retryCount ?? 3))
             ytdlpFormat = saved.ytdlpFormat ?? "bestvideo+bestaudio/best"
+            outputFormat = saved.outputFormat ?? "mp4"
         }
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in self?.pump() }
     }
@@ -375,6 +379,7 @@ final class DownloadEngine: NSObject, ObservableObject {
             limit: max(0, speedLimitKB) * 1024,
             headers: requestHeaders[id] ?? [:],
             ytdlpFormat: ytdlpFormat,
+            outputFormat: outputFormat,
             progress: { [weak self] progress in
                 guard let self,
                       let i = self.items.firstIndex(where: { $0.id == id }),
@@ -512,7 +517,8 @@ final class DownloadEngine: NSObject, ObservableObject {
             try FileManager.default.createDirectory(at: stateURL.deletingLastPathComponent(), withIntermediateDirectories: true)
             let snapshot = Snapshot(items: items, folder: folder, concurrent: maxConcurrent,
                                     connections: connections, speedLimitKB: speedLimitKB,
-                                    retryCount: retryCount, ytdlpFormat: ytdlpFormat)
+                                    retryCount: retryCount, ytdlpFormat: ytdlpFormat,
+                                    outputFormat: outputFormat)
             try JSONEncoder().encode(snapshot).write(to: stateURL, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: stateURL.path)
         } catch { globalError = "İndirme geçmişi kaydedilemedi: \(error.localizedDescription)" }
