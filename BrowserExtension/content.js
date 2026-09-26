@@ -330,7 +330,6 @@
     btn.onclick = function(e){
       e.stopPropagation(); e.preventDefault();
       if (direct) {
-        // yt-dlp sitesi — sayfanın URL'sini direkt gönder
         doDownload(location.href, location.href);
         btn.innerHTML = ICON + "<span>Eklendi ✓</span>";
         setTimeout(function(){ btn.innerHTML = ICON + "<span>DM İndir</span>"; }, 2500);
@@ -342,13 +341,15 @@
     var wrap = video.parentElement;
     if (!wrap) return;
     if (getComputedStyle(wrap).position === "static") wrap.style.position = "relative";
-    wrap.appendChild(btn);
-
-    var t = null;
-    function show(){ clearTimeout(t); btn.style.opacity="1"; }
-    function hide(){ t = setTimeout(function(){ btn.style.opacity="0"; }, 800); }
-    wrap.addEventListener("mouseenter", show); wrap.addEventListener("mouseleave", hide);
-    btn.addEventListener("mouseenter", show);  btn.addEventListener("mouseleave", hide);
+    // YouTube'da video üzerinde buton gösterme — player bar'da zaten var
+    if (!direct) {
+      wrap.appendChild(btn);
+      var t = null;
+      function show(){ clearTimeout(t); btn.style.opacity="1"; }
+      function hide(){ t = setTimeout(function(){ btn.style.opacity="0"; }, 800); }
+      wrap.addEventListener("mouseenter", show); wrap.addEventListener("mouseleave", hide);
+      btn.addEventListener("mouseenter", show);  btn.addEventListener("mouseleave", hide);
+    }
   }
 
   // DOM gözlemcisi
@@ -455,42 +456,37 @@
     btn.title = "Download Manager ile indir";
     btn.style.cssText = [
       "background:none;border:none;cursor:pointer;",
-      "display:inline-flex;align-items:center;gap:5px;",
-      "padding:0 8px;height:48px;",
-      "color:"+ACCENT+";",
-      "font:700 13px/1 -apple-system,sans-serif;",
-      "opacity:0.9;transition:opacity .15s;",
+      "display:inline-flex;align-items:center;",
+      "padding:0 6px;height:48px;",
+      "opacity:0.9;transition:opacity .15s,transform .15s;",
       "vertical-align:top;"
     ].join("");
 
-    // İndirme ikonu SVG
-    btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"'
-      + ' stroke="'+ACCENT+'" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
+    // Sadece beyaz indirme ikonu — yazı yok
+    btn.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"'
+      + ' stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
       + '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>'
       + '<polyline points="7 10 12 15 17 10"/>'
       + '<line x1="12" y1="15" x2="12" y2="3"/>'
-      + '</svg>'
-      + '<span style="font-size:12px;font-weight:700;letter-spacing:.3px">DM</span>';
+      + '</svg>';
 
-    btn.onmouseenter = function(){ btn.style.opacity="1"; btn.style.transform="scale(1.1)"; };
+    btn.onmouseenter = function(){ btn.style.opacity="1"; btn.style.transform="scale(1.15)"; };
     btn.onmouseleave = function(){ btn.style.opacity="0.9"; btn.style.transform=""; };
 
     btn.onclick = function(e) {
       e.stopPropagation();
       doDownload(location.href, location.href);
-      // Kısa onay animasyonu
-      btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"'
-        + ' stroke="'+ACCENT+'" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'
-        + '<polyline points="20 6 9 17 4 12"/></svg>'
-        + '<span style="font-size:12px;font-weight:700">Eklendi</span>';
+      // Kısa onay — checkmark göster
+      btn.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"'
+        + ' stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'
+        + '<polyline points="20 6 9 17 4 12"/></svg>';
       setTimeout(function(){
-        btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"'
-          + ' stroke="'+ACCENT+'" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
+        btn.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"'
+          + ' stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
           + '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>'
           + '<polyline points="7 10 12 15 17 10"/>'
           + '<line x1="12" y1="15" x2="12" y2="3"/>'
-          + '</svg>'
-          + '<span style="font-size:12px;font-weight:700;letter-spacing:.3px">DM</span>';
+          + '</svg>';
       }, 2500);
     };
 

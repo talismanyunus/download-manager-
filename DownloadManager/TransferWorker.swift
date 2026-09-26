@@ -499,22 +499,19 @@ final class TransferWorker {
             "-o", outputTemplate
         ]
 
-        // Çıktı formatı
+        // Çıktı formatı — mp4 seçiliyse format string'i mp4-native codec'e zorla
         if outputFormat != "original" {
             let audioOnly = ["mp3", "m4a", "aac", "flac", "wav", "opus"].contains(outputFormat)
             if audioOnly {
-                // Sadece ses — extract + recode
                 args += ["--extract-audio", "--audio-format", outputFormat, "--audio-quality", "0"]
+            } else if outputFormat == "mp4" {
+                // Önce mp4 native codec dene, yoksa ffmpeg ile dönüştür
+                let mp4Format = buildMp4Format(from: ytdlpFormat)
+                if let fIdx = args.firstIndex(of: "-f") { args[fIdx + 1] = mp4Format }
+                args += ["--merge-output-format", "mp4"]
             } else {
-                // Video: önce merge formatını ayarla (birleştirme aşaması)
                 args += ["--merge-output-format", outputFormat]
-                // Eğer kaynak codec container'a sığmıyorsa recode et
-                // mp4 için x264/aac gerekiyorsa:
-                if outputFormat == "mp4" {
-                    args += ["--postprocessor-args", "ffmpeg:-c:v libx264 -c:a aac"]
-                } else {
-                    args += ["--recode-video", outputFormat]
-                }
+                args += ["--recode-video", outputFormat]
             }
         }
 
@@ -635,6 +632,25 @@ final class TransferWorker {
         if stopped { return WorkerResult(cancelled: true) }
         if code != 0 { return failure("single.log", code: code) }
         return WorkerResult(file: output, name: filename.isEmpty ? "İndirme" : filename)
+    }
+
+    /// mp4 seçiliyse YouTube'un varsayılan vp9/webm yerine h264/aac codec'li stream tercih eder.
+    /// Yoksa ffmpeg ile dönüştürmek için fallback chain ekler.
+    private func buildMp4Format(from base: String) -> String {
+        if base.contains("bestaudio/best") && !base.contains("video") { return base } // ses only
+        if base.contains("height<=") {
+            let q = base.components(separatedBy: "<=").dropFirst().first?
+                        .components(separatedBy: "]").first ?? "1080"
+            return "bestvideo[height<=\(q)][ext=mp4][vcodec^=avc]+bestaudio[ext=m4a]"
+                 + "/bestvideo[height<=\(q)][ext=mp4]+bestaudio[ext=m4a]"
+                 + "/bestvideo[height<=\(q)]+bestaudio[ext=m4a]"
+                 + "/bestvideo[height<=\(q)]+bestaudio/best"
+        }
+        return "bestvideo[ext=mp4][vcodec^=avc]+bestaudio[ext=m4a]"
+             + "/bestvideo[ext=mp4]+bestaudio[ext=m4a]"
+             + "/bestvideo[ext=mp4]+bestaudio"
+             + "/bestvideo+bestaudio[ext=m4a]"
+             + "/bestvideo+bestaudio/best"
     }
 
     // MARK: - HLS/DASH (ffmpeg)
