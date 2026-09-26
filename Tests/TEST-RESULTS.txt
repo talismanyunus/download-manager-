@@ -1,0 +1,7 @@
+initial downloading ok 262144
+PASS pause; resume data: true
+PASS resume integrity, concurrency queue, duplicate filename preservation
+PASS HTTP error handling
+PASS scheduled download
+PASS active removal and persistent history
+ALL INTEGRATION TESTS PASSED

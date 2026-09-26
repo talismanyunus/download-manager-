@@ -1,0 +1,32 @@
+name: DownloadManager
+options:
+  bundleIdPrefix: com.local
+  deploymentTarget:
+    macOS: '13.0'
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    CODE_SIGN_IDENTITY: '-'
+    CODE_SIGN_STYLE: Manual
+    MACOSX_DEPLOYMENT_TARGET: '13.0'
+targets:
+  DownloadManager:
+    type: application
+    platform: macOS
+    sources: [DownloadManager]
+    info:
+      path: DownloadManager/Info.plist
+      properties:
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.local.downloadmanager
+        PRODUCT_NAME: Download Manager
+        INFOPLIST_KEY_CFBundleDisplayName: Download Manager
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_HARDENED_RUNTIME: YES
+        COMBINE_HIDPI_IMAGES: YES
+    scheme:
+      gatherCoverageData: false

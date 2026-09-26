@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Download Manager</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--ac:#5CE8C2;--bg:#0d1117;--pn:#161b22;--border:rgba(255,255,255,.08);--muted:rgba(255,255,255,.4)}
+body{width:340px;background:var(--bg);color:#f0f4f8;font:13px/1.5 -apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+
+/* Header */
+.hdr{display:flex;align-items:center;gap:10px;padding:14px 16px 12px;border-bottom:1px solid var(--border)}
+.logo{width:30px;height:30px;background:var(--ac);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.hdr-text{flex:1}
+.hdr-text h1{font-size:13px;font-weight:700}
+.hdr-text p{font-size:10px;color:var(--muted);margin-top:1px}
+.dot{width:8px;height:8px;border-radius:50%;background:#ff6b6b;flex-shrink:0;transition:background .3s}
+.dot.on{background:var(--ac)}
+
+/* Aktif indirme özeti */
+.active-bar{display:none;align-items:center;gap:8px;padding:9px 16px;background:rgba(92,232,194,.07);border-bottom:1px solid rgba(92,232,194,.12)}
+.active-bar.show{display:flex}
+.active-bar .pulse{width:7px;height:7px;border-radius:50%;background:var(--ac);animation:pulse 1.2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.active-bar span{font-size:11px;color:var(--ac);font-weight:600}
+
+/* Mevcut sekme kartı */
+.tab-card{margin:12px 14px 0;padding:10px 12px;background:var(--pn);border:1px solid var(--border);border-radius:10px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:border-color .15s}
+.tab-card:hover{border-color:var(--ac)}
+.tab-fav{width:28px;height:28px;border-radius:6px;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}
+.tab-fav img{width:16px;height:16px}
+.tab-info{flex:1;overflow:hidden}
+.tab-title{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tab-url{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tab-dl{font-size:10px;font-weight:700;color:var(--ac);flex-shrink:0;white-space:nowrap}
+
+/* URL input */
+.url-sec{padding:12px 14px 0}
+.url-sec label{display:block;font-size:9px;font-weight:700;letter-spacing:.9px;color:var(--muted);text-transform:uppercase;margin-bottom:5px}
+.url-row{display:flex;gap:6px}
+.url-row input{flex:1;background:var(--pn);border:1px solid var(--border);border-radius:7px;color:#f0f4f8;font:12px -apple-system,sans-serif;padding:7px 10px;outline:none;transition:border-color .15s}
+.url-row input:focus{border-color:var(--ac)}
+.url-row input::placeholder{color:var(--muted)}
+.btn-add{background:var(--ac);color:#000;border:none;border-radius:7px;font:700 12px -apple-system,sans-serif;padding:0 14px;cursor:pointer;flex-shrink:0;transition:opacity .15s}
+.btn-add:hover{opacity:.85}
+.btn-add:disabled{opacity:.4;cursor:default}
+
+/* Toast */
+.toast{margin:10px 14px 0;padding:8px 12px;border-radius:7px;font-size:11px;display:none}
+.toast.ok{background:rgba(92,232,194,.1);color:var(--ac);display:block}
+.toast.err{background:rgba(255,107,107,.1);color:#ff6b6b;display:block}
+
+/* Footer */
+.footer{margin-top:12px;padding:9px 16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.footer p{font-size:10px;color:var(--muted)}
+.footer p span{color:var(--ac)}
+.footer a{font-size:10px;color:var(--muted);text-decoration:none}
+.footer a:hover{color:var(--ac)}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="logo">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+    </svg>
+  </div>
+  <div class="hdr-text">
+    <h1>Download Manager</h1>
+    <p id="app-label">Kontrol ediliyor…</p>
+  </div>
+  <div class="dot" id="dot"></div>
+</div>
+
+<!-- Aktif indirme varsa göster -->
+<div class="active-bar" id="active-bar">
+  <div class="pulse"></div>
+  <span id="active-text">0 indirme aktif</span>
+</div>
+
+<!-- Mevcut sekme -->
+<div class="tab-card" id="tab-card">
+  <div class="tab-fav">
+    <img id="tab-fav" src="" alt="" onerror="this.style.display='none'">
+  </div>
+  <div class="tab-info">
+    <div class="tab-title" id="tab-title">Yükleniyor…</div>
+    <div class="tab-url"   id="tab-url"></div>
+  </div>
+  <div class="tab-dl" id="tab-dl">İNDİR ↓</div>
+</div>
+
+<!-- Manuel URL -->
+<div class="url-sec">
+  <label>Link yapıştır</label>
+  <div class="url-row">
+    <input type="text" id="url-in" placeholder="https://…" autocomplete="off" spellcheck="false">
+    <button class="btn-add" id="btn-add">Ekle</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="footer">
+  <p>Aktif: <span id="cnt">—</span> indirme</p>
+  <a href="#" id="open-app">Uygulamayı öne al</a>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>
